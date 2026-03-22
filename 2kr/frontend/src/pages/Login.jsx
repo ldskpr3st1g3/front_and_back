@@ -9,25 +9,62 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      const { data } = await apiClient.post("/auth/login", { username, password });
+      const { data } = await apiClient.post("/auth/login", {
+        username,
+        password,
+      });
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("refreshToken", data.refreshToken);
-      navigate("/"); // Переходим в магазин
+      navigate("/");
     } catch (error) {
-      alert("Ошибка входа: Неверный логин или пароль");
+      alert(error.response?.data?.error || "Ошибка входа");
     }
   };
 
   return (
     <div>
-      <h2>Вход в систему</h2>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px", width: "300px" }}>
-        <input placeholder="Имя пользователя (Логин)" value={username} onChange={e => setUsername(e.target.value)} required style={{ padding: "8px" }}/>
-        <input placeholder="Пароль" type="password" value={password} onChange={e => setPassword(e.target.value)} required style={{ padding: "8px" }}/>
-        <button type="submit" style={{ padding: "10px", cursor: "pointer" }}>Войти</button>
+      <h2>Вход</h2>
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          width: "300px",
+        }}
+      >
+        <input
+          placeholder="Логин"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          style={{ padding: "8px" }}
+        />
+        <input
+          placeholder="Пароль"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          style={{ padding: "8px" }}
+        />
+        <button type="submit" style={{ padding: "10px" }}>
+          Войти
+        </button>
       </form>
-      <p>Нет аккаунта? <Link to="/register">Зарегистрироваться</Link></p>
+      <p>
+        Нет аккаунта? <Link to="/register">Регистрация</Link>
+      </p>
+      <div style={{ marginTop: "20px" }}>
+        <p>
+          <b>Тестовые аккаунты:</b>
+        </p>
+        <p>admin / admin123</p>
+        <p>seller / seller123</p>
+        <p>user / user123</p>
+      </div>
     </div>
   );
 }
