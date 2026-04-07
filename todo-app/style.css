@@ -1,0 +1,217 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f0f2f5;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+header h1 {
+  font-size: 1.8rem;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+nav {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.nav-btn {
+  padding: 8px 20px;
+  border: 2px solid #667eea;
+  background: white;
+  color: #667eea;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.nav-btn.active,
+.nav-btn:hover {
+  background: #667eea;
+  color: white;
+}
+
+.push-controls {
+  margin-top: 10px;
+}
+
+.push-btn {
+  padding: 8px 16px;
+  border: none;
+  background: #ff6b6b;
+  color: white;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s;
+}
+
+.push-btn:hover {
+  opacity: 0.8;
+}
+
+/* Форма */
+.note-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.note-form input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.note-form input:focus {
+  border-color: #667eea;
+}
+
+.note-form button {
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.note-form button:hover {
+  background: #5a6fd6;
+}
+
+/* Список заметок */
+.notes-list {
+  list-style: none;
+}
+
+.note-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: white;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.note-text {
+  flex: 1;
+  color: #333;
+}
+
+.btn-delete {
+  background: #ff4757;
+  color: white;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+}
+
+.btn-delete:hover {
+  background: #e84040;
+}
+
+.empty-message {
+  text-align: center;
+  color: #999;
+  padding: 40px 20px;
+  font-size: 15px;
+}
+
+.text-error {
+  color: #ff4757;
+  text-align: center;
+  padding: 20px;
+}
+
+/* WS уведомление */
+.ws-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #667eea;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  animation: fadeIn 0.3s ease;
+  max-width: 300px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.about-page {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.about-page h2 {
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.about-page p {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
