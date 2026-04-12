@@ -8,5 +8,38 @@
     />
     <button type="submit">Добавить</button>
   </form>
+
+  <form
+    id="reminder-form"
+    class="note-form"
+    style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap"
+  >
+    <input
+      type="text"
+      id="reminder-text"
+      placeholder="Текст напоминания..."
+      autocomplete="off"
+      style="flex: 1; min-width: 150px"
+    />
+    <input type="datetime-local" id="reminder-time" style="flex: 0 0 auto" />
+    <button type="submit" style="background: #e67e22; color: white">
+      ⏰ Напоминание
+    </button>
+  </form>
+
+  <!-- Всплывающее напоминание с кнопкой отложить -->
+  <div id="reminder-popup" class="reminder-popup" style="display: none">
+    <div class="reminder-popup-content">
+      <span class="reminder-icon">⏰</span>
+      <p id="reminder-popup-text"></p>
+      <div class="reminder-popup-buttons">
+        <button id="reminder-snooze" class="btn-snooze">
+          Отложить на 5 мин
+        </button>
+        <button id="reminder-dismiss" class="btn-dismiss">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
   <ul id="notes-list" class="notes-list"></ul>
 </div>

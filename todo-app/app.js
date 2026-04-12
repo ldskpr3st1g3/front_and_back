@@ -43,9 +43,18 @@ loadContent("home");
 function initNotes() {
   const form = document.getElementById("note-form");
   const input = document.getElementById("note-input");
+  const reminderForm = document.getElementById("reminder-form");
+  const reminderText = document.getElementById("reminder-text");
+  const reminderTime = document.getElementById("reminder-time");
   const list = document.getElementById("notes-list");
 
   if (!form || !input || !list) return;
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
   function loadNotes() {
     const notes = JSON.parse(localStorage.getItem("notes") || "[]");
@@ -59,8 +68,18 @@ function initNotes() {
     list.innerHTML = notes
       .map((note, index) => {
         const text = typeof note === "object" ? note.text : note;
+        let reminderInfo = "";
+        if (note.reminder) {
+          const d = new Date(note.reminder);
+          const isPast = note.reminder < Date.now();
+          const style = isPast
+            ? "color: #27ae60; text-decoration: line-through;"
+            : "color: #e67e22;";
+          const prefix = isPast ? "✅" : "⏰";
+          reminderInfo = `<br><small style="${style}">${prefix} ${d.toLocaleString()}</small>`;
+        }
         return `<li class="note-item">
-                <span class="note-text">${escapeHtml(text)}</span>
+                <span class="note-text">${escapeHtml(text)}${reminderInfo}</span>
                 <button class="btn-delete" data-index="${index}">✕</button>
             </li>`;
       })
@@ -73,12 +92,23 @@ function initNotes() {
     });
   }
 
-  function addNote(text) {
+  function addNote(text, reminderTimestamp = null) {
     const notes = JSON.parse(localStorage.getItem("notes") || "[]");
-    notes.push({ id: Date.now(), text });
+    const newNote = { id: Date.now(), text, reminder: reminderTimestamp };
+    notes.push(newNote);
     localStorage.setItem("notes", JSON.stringify(notes));
     loadNotes();
-    socket.emit("newTask", { text, timestamp: Date.now() });
+
+    if (reminderTimestamp) {
+      socket.emit("newReminder", {
+        id: newNote.id,
+        text: text,
+        reminderTime: reminderTimestamp,
+      });
+      console.log("[APP] Напоминание отправлено на сервер");
+    } else {
+      socket.emit("newTask", { text, timestamp: Date.now() });
+    }
   }
 
   function deleteNote(index) {
@@ -88,12 +118,7 @@ function initNotes() {
     loadNotes();
   }
 
-  function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
+  // Обычная заметка
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const text = input.value.trim();
@@ -104,7 +129,125 @@ function initNotes() {
     }
   });
 
+  // Заметка с напоминанием
+  if (reminderForm && reminderText && reminderTime) {
+    reminderForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = reminderText.value.trim();
+      const datetime = reminderTime.value;
+
+      if (!text || !datetime) {
+        alert("Заполните текст и время напоминания");
+        return;
+      }
+
+      const timestamp = new Date(datetime).getTime();
+      if (timestamp <= Date.now()) {
+        alert("Время напоминания должно быть в будущем!");
+        return;
+      }
+
+      addNote(text, timestamp);
+      reminderText.value = "";
+      reminderTime.value = "";
+    });
+  }
+
   loadNotes();
+}
+
+// ==================== POPUP НАПОМИНАНИЯ ====================
+function showReminderPopup(reminderId, text) {
+  // Убираем старый popup если есть
+  const existingPopup = document.getElementById("reminder-popup");
+  if (existingPopup) {
+    existingPopup.remove();
+  }
+
+  // Создаём popup заново (на случай если мы не на home странице)
+  const popup = document.createElement("div");
+  popup.id = "reminder-popup";
+  popup.className = "reminder-popup";
+  popup.innerHTML = `
+    <div class="reminder-popup-content">
+      <span class="reminder-icon">⏰</span>
+      <p id="reminder-popup-text">${text}</p>
+      <div class="reminder-popup-buttons">
+        <button id="reminder-snooze" class="btn-snooze">Отложить на 5 мин</button>
+        <button id="reminder-dismiss" class="btn-dismiss">Закрыть</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(popup);
+
+  // Звук (если поддерживается)
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.frequency.value = 800;
+    oscillator.type = "sine";
+    gainNode.gain.value = 0.3;
+    oscillator.start();
+    setTimeout(() => {
+      oscillator.stop();
+      audioCtx.close();
+    }, 300);
+  } catch (e) {
+    // Игнорируем если аудио не поддерживается
+  }
+
+  // Кнопка «Отложить на 5 мин»
+  document
+    .getElementById("reminder-snooze")
+    .addEventListener("click", async () => {
+      console.log("[POPUP] Откладываем на 5 мин, id:", reminderId);
+
+      try {
+        const response = await fetch(
+          `${SERVER_URL}/snooze?reminderId=${reminderId}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: text }),
+          },
+        );
+        const result = await response.json();
+        console.log("[POPUP] Snooze ответ:", result);
+
+        // Обновляем время в localStorage
+        const notes = JSON.parse(localStorage.getItem("notes") || "[]");
+        const noteIndex = notes.findIndex((n) => n.id === reminderId);
+        if (noteIndex !== -1) {
+          notes[noteIndex].reminder = Date.now() + 5 * 60 * 1000;
+          localStorage.setItem("notes", JSON.stringify(notes));
+        }
+
+        // Показываем подтверждение
+        popup.querySelector(".reminder-popup-content").innerHTML = `
+        <span class="reminder-icon">✅</span>
+        <p>Отложено на 5 минут</p>
+      `;
+        setTimeout(() => popup.remove(), 1500);
+      } catch (err) {
+        console.error("[POPUP] Ошибка snooze:", err);
+        alert("Ошибка при откладывании");
+      }
+    });
+
+  // Кнопка «Закрыть»
+  document.getElementById("reminder-dismiss").addEventListener("click", () => {
+    popup.remove();
+  });
+
+  // Закрытие по клику на фон
+  popup.addEventListener("click", (e) => {
+    if (e.target === popup) {
+      popup.remove();
+    }
+  });
 }
 
 // ==================== WS УВЕДОМЛЕНИЯ ====================
@@ -124,16 +267,18 @@ socket.on("taskAdded", (task) => {
   }, 3000);
 });
 
+// Получаем напоминание через WebSocket — показываем popup
+socket.on("reminderFired", (data) => {
+  console.log("[WS] Напоминание сработало:", data);
+  showReminderPopup(data.id, data.text);
+});
+
 // ==================== PUSH ====================
 const VAPID_PUBLIC_KEY =
   "BO78vbRcjLrvs2bAfbzal794I3h6AoYKiWvcZr1imzygn_qkkXFEbEa0pmS1AuWNP3cZAEGQbsiuuefER9UYLnA";
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ
 function urlBase64ToUint8Array(base64String) {
-  // Убираем все пробелы, переносы строк и прочий мусор
   const cleaned = base64String.replace(/[\s\n\r]/g, "");
-
-  // Добавляем padding
   const padding = "=".repeat((4 - (cleaned.length % 4)) % 4);
   const base64 = (cleaned + padding).replace(/-/g, "+").replace(/_/g, "/");
 
@@ -141,9 +286,7 @@ function urlBase64ToUint8Array(base64String) {
   try {
     rawData = window.atob(base64);
   } catch (e) {
-    console.error("[PUSH] Ошибка atob! Ключ невалидный:", e);
-    console.error("[PUSH] Строка для atob:", base64);
-    console.error("[PUSH] Длина:", base64.length);
+    console.error("[PUSH] Ошибка atob:", e);
     throw e;
   }
 
@@ -164,26 +307,10 @@ async function subscribeToPush() {
 
   try {
     const registration = await navigator.serviceWorker.ready;
-    console.log("[PUSH] SW готов");
-
     let subscription = await registration.pushManager.getSubscription();
 
-    if (subscription) {
-      console.log("[PUSH] Подписка уже есть");
-    } else {
-      console.log("[PUSH] Создаю новую подписку...");
-      console.log(
-        "[PUSH] VAPID ключ (первые 20 символов):",
-        VAPID_PUBLIC_KEY.substring(0, 20),
-      );
-      console.log("[PUSH] VAPID ключ длина:", VAPID_PUBLIC_KEY.length);
-
+    if (!subscription) {
       const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      console.log(
-        "[PUSH] applicationServerKey создан, длина:",
-        applicationServerKey.length,
-      );
-
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: applicationServerKey,
@@ -245,7 +372,6 @@ if ("serviceWorker" in navigator) {
         return;
       }
 
-      // Проверяем текущую подписку и переотправляем на сервер
       const currentSub = await reg.pushManager.getSubscription();
       if (currentSub) {
         enableBtn.style.display = "none";
@@ -255,12 +381,9 @@ if ("serviceWorker" in navigator) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(currentSub),
         });
-        console.log("[PUSH] Существующая подписка отправлена на сервер");
       }
 
       enableBtn.addEventListener("click", async () => {
-        console.log("[PUSH] Клик: включить");
-
         if (Notification.permission === "denied") {
           alert("Уведомления заблокированы в настройках браузера!");
           return;
